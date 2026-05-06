@@ -18,6 +18,7 @@ When        Who                 What
 2026-03-03  DWaldron            Include the IsReportable column (air-web#502)
 2026-03-16  DWaldron            Rename the Case Files table (epa-dx#95)
 2026-04-09  DWaldron            Renamed AirProgramCodes column (air-web#537, 1f183b3)
+2026-05-06  DWaldron            Update violation type columns (epa-dx#102)
 
 ***************************************************************************************************/
 
@@ -34,7 +35,7 @@ select etl.EpaActionId(c.FacilityId, c.ActionNumber) as CaseFileId,
        iif(i.IssueDate is null, null, 'LTR')         as AdvisementMethodTypeCode,
        c.ViolationTypeCode,
        c.DayZero                                     as FrvDeterminationDate,
-       iif(v.SeverityCode = 'HPV', c.DayZero, null)  as HpvDayZeroDate,
+       iif(v.Severity = 'HPV', c.DayZero, null)      as HpvDayZeroDate,
        concat('Facility ID ', c.FacilityId)          as GaFacilityId,
        c.AirProgramCodes                             as AirPrograms,
        c.PollutantIds,
