@@ -360,7 +360,7 @@ BEGIN TRY
                       where t.EnforcementActionId = u.EnforcementActionId);
 
     -- Insert Final Order Facilities
-    -- (No update or delete needed Final Order Facility can't be changed)
+    -- (No update or delete needed; Final Order Facility can't be changed)
     insert into NETWORKNODEFLOW.dbo.AirDAFinalOrderAirFacility (AirDAFinalOrderId, AirFacilityId)
     select f.AirDAFinalOrderId, u.AirFacilityId
     from NETWORKNODEFLOW.dbo.AirDAFinalOrder f

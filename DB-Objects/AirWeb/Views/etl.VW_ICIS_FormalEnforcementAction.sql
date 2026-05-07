@@ -19,6 +19,7 @@ When        Who                 What
                                 formal EAs (epa-dx#2)
 2026-03-16  DWaldron            Renamed the Case Files table (epa-dx#95)
 2026-04-09  DWaldron            Renamed AirProgramCodes column (air-web#537, 1f183b3)
+2026-05-07  DWaldron            Use Executed Date instead of Issued Date for CO FOE (air-web#597)
 
 ***************************************************************************************************/
 
@@ -29,8 +30,9 @@ select etl.EpaActionId(e.FacilityId, e.ActionNumber)              as Enforcement
               iif(e.OrderId is null, null, concat(' EPD-AQC-', e.OrderId)),
               ', GA EPD Enforcement Case ID ', e.CaseFileId)      as EnforcementActionName,
        concat('GA EPD Facility ID ', e.FacilityId)                as GaFacilityId,
-       -- APB does not currently track Final Order Entered (FOE):
-       iif(e.ActionType = N'ConsentOrder', e.IssueDate, null)     as FinalOrderIssuedEnteredDate,
+       -- Final Order Entered (FOE) date is the Executed Date for COs.
+       -- APB does not currently track the FOE date for AOs.
+       iif(e.ActionType = N'ConsentOrder', e.ExecutedDate, null)  as FinalOrderIssuedEnteredDate,
        e.ResolvedDate                                             as AirEnforcementActionResolvedDate,
        -- Non-judicial penalties only:
        iif(e.ActionType = N'ConsentOrder', e.PenaltyAmount, null) as CashCivilPenaltyRequiredAmount,
