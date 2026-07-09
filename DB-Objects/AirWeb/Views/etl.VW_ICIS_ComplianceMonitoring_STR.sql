@@ -14,13 +14,16 @@ Modification History:
 When        Who                 What
 ----------  ------------------  -------------------------------------------------------------------
 2026-02-03  DWaldron            Split from etl.VW_ICIS_ComplianceMonitoring (epa-dx#2)
+2026-07-09  DWaldron            Include open compliance reviews as "pending" data (epa-dx#105)
 
 ***************************************************************************************************/
 
 select etl.EpaActionId(c.FacilityId, c.ActionNumber)            as ComplianceMonitoringId,
        etl.EpaFacilityId(c.FacilityId)                          as AirFacilityID,
        'CST'                                                    as InspectionTypeCode,
-       concat('GA EPD Stack Test Report Review ID ', c.Id)      as ActivityName,
+       concat('GA EPD Stack Test Report Review ID ', c.Id,
+              iif(c.IsClosed = 0, ' (pending final compliance review)', null))
+                                                                as ActivityName,
        convert(date, i.DATTESTDATEEND)                          as ComplianceMonitoringDate,
        l.ICIS_POLLUTANT_CODE                                    as AirPollutantCode,
        concat('Facility ID ', c.FacilityId)                     as GaFacilityId,
@@ -45,7 +48,6 @@ from dbo.ComplianceWork c
         on l.LGCY_POLLUTANT_CODE = i.STRPOLLUTANT
 where c.IsDeleted = 0
   and c.ActionNumber is not null
-  and c.IsClosed = 1
   and c.ComplianceWorkType = N'SourceTestReview'
   and exists (select 1
               from NETWORKNODEFLOW.dbo.AirFacility
