@@ -2,7 +2,7 @@
 GO
 
 CREATE OR ALTER PROCEDURE etl.TriggerDataUpdateAtEPA
-    @AirsNumber varchar(max)
+    @AirsNumber varchar(12)
 AS
 
 /**************************************************************************************************
@@ -20,10 +20,11 @@ Previously  DWaldron            Initially created in Oracle
 2016-09-16  DWaldron            Migrated to SQL Server
 2026-01-16  DWaldron            Updated for new Air Web app (epa-dx#2)
 2026-03-16  DWaldron            Rename the Case Files table (epa-dx#95)
+2026-07-16  DWaldron            Limit input parameter to 12 characters
 
 ***************************************************************************************************/
 
-    SET XACT_ABORT, NOCOUNT ON;
+    SET XACT_ABORT, NOCOUNT ON
 BEGIN TRY
 
     declare @FormattedAirs varchar(9) = iaip_facility.FormatAirsNumber(@AirsNumber)
@@ -41,9 +42,13 @@ BEGIN TRY
     where FacilityId = @FormattedAirs
       and IsComplianceEvent = 1;
 
-    update AirWeb.dbo.Fces set DataExchangeStatus = 'U' where FacilityId = @FormattedAirs;
+    update AirWeb.dbo.Fces
+    set DataExchangeStatus = 'U'
+    where FacilityId = @FormattedAirs;
 
-    update AirWeb.dbo.EnforcementCaseFiles set DataExchangeStatus = 'U' where FacilityId = @FormattedAirs;
+    update AirWeb.dbo.EnforcementCaseFiles
+    set DataExchangeStatus = 'U'
+    where FacilityId = @FormattedAirs;
 
     update e
     set DataExchangeStatus = 'U'
