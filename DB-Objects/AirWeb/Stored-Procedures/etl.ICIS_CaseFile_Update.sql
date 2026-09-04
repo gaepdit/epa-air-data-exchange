@@ -44,6 +44,8 @@ Previously  DWaldron            Initially created in Oracle
 2026-02-27  DWaldron            Only submit "reportable" Case Files (air-web#502)
 2026-03-09  DWaldron            Fix enforcement action type codes (epa-dx#92)
 2026-03-16  DWaldron            Rename the Case Files table (epa-dx#95)
+2026-09-04  DWaldron            Prevent adding Enforcement Action data without a corresponding
+                                Case File (epa-dx#108)
 
 ***************************************************************************************************/
 
@@ -258,7 +260,10 @@ BEGIN TRY
     from #InformalEaUpdates u
     where not exists (select 1
                       from NETWORKNODEFLOW.dbo.EnforcementAction t
-                      where t.EnforcementActionId = u.EnforcementActionId);
+                      where t.EnforcementActionId = u.EnforcementActionId)
+      and exists (select 1
+                  from NETWORKNODEFLOW.dbo.CaseFile t
+                  where t.CaseFileId = u.CaseFileId);
 
     insert into NETWORKNODEFLOW.dbo.EnforcementAction
     (EnforcementActionId, EnforcementActionTypeCode, EnforcementActionName, Forum, EAUserDefinedField3,
@@ -274,7 +279,10 @@ BEGIN TRY
     from #FormalEaUpdates u
     where not exists (select 1
                       from NETWORKNODEFLOW.dbo.EnforcementAction t
-                      where t.EnforcementActionId = u.EnforcementActionId);
+                      where t.EnforcementActionId = u.EnforcementActionId)
+      and exists (select 1
+                  from NETWORKNODEFLOW.dbo.CaseFile t
+                  where t.CaseFileId = u.CaseFileId);
 
     -- Insert enforcement action facilities
     -- (No update or delete needed because enforcement actions facility can't be changed.)
@@ -292,7 +300,13 @@ BEGIN TRY
     from #AllEaUpdates u
     where not exists (select 1
                       from NETWORKNODEFLOW.dbo.CaseFile2DAEALink t
-                      where t.EnforcementActionId = u.EnforcementActionId);
+                      where t.EnforcementActionId = u.EnforcementActionId)
+      and exists (select 1
+                  from NETWORKNODEFLOW.dbo.EnforcementAction t
+                  where t.EnforcementActionId = u.EnforcementActionId)
+      and exists (select 1
+                  from NETWORKNODEFLOW.dbo.CaseFile t
+                  where t.CaseFileId = u.CaseFileId);
 
     -- Delete and reinsert Enforcement Action Programs and Pollutants
     delete t
@@ -303,7 +317,7 @@ BEGIN TRY
                     and t.CODENAME in ('ProgramsViolatedCode', 'AirPollutantCode'));
 
     insert into NETWORKNODEFLOW.dbo.ENFORCEMENTACTIONCODE
-    (ENFORCEMENTACTIONCODEID, ENFORCEMENTACTIONID, CODENAME, CODEVALUE)
+        (ENFORCEMENTACTIONCODEID, ENFORCEMENTACTIONID, CODENAME, CODEVALUE)
     select newid()                as ENFORCEMENTACTIONCODEID,
            EnforcementActionId    as ENFORCEMENTACTIONID,
            'ProgramsViolatedCode' as CODENAME,
@@ -312,7 +326,7 @@ BEGIN TRY
         cross apply openjson(AirPrograms);
 
     insert into NETWORKNODEFLOW.dbo.ENFORCEMENTACTIONCODE
-    (ENFORCEMENTACTIONCODEID, ENFORCEMENTACTIONID, CODENAME, CODEVALUE)
+        (ENFORCEMENTACTIONCODEID, ENFORCEMENTACTIONID, CODENAME, CODEVALUE)
     select newid()             as ENFORCEMENTACTIONCODEID,
            EnforcementActionId as ENFORCEMENTACTIONID,
            'AirPollutantCode'  as CODENAME,
@@ -323,7 +337,7 @@ BEGIN TRY
     -- Insert Enforcement Action Type Code
     -- (No update or delete needed because Enforcement Action Type can't be changed)
     insert into NETWORKNODEFLOW.dbo.ENFORCEMENTACTIONCODE
-    (ENFORCEMENTACTIONCODEID, ENFORCEMENTACTIONID, CODENAME, CODEVALUE)
+        (ENFORCEMENTACTIONCODEID, ENFORCEMENTACTIONID, CODENAME, CODEVALUE)
     select newid()                                              as ENFORCEMENTACTIONCODEID,
            EnforcementActionId                                  as ENFORCEMENTACTIONID,
            'EnforcementActionTypeCode'                          as CODENAME,
@@ -400,7 +414,10 @@ BEGIN TRY
       and not exists (select 1
                       from NETWORKNODEFLOW.dbo.EnforcementActionMilestone t
                       where t.EnforcementActionId = u.EnforcementActionId
-                        and t.Type = 'RSAGJ');
+                        and t.Type = 'RSAGJ')
+      and exists (select 1
+                  from NETWORKNODEFLOW.dbo.EnforcementAction t
+                  where t.EnforcementActionId = u.EnforcementActionId);
 
     insert into NETWORKNODEFLOW.dbo.EnforcementActionMilestone
         (EnforcementActionId, MilestoneActualDate, Type, TransactionID)
@@ -414,7 +431,10 @@ BEGIN TRY
       and not exists (select 1
                       from NETWORKNODEFLOW.dbo.EnforcementActionMilestone t
                       where t.EnforcementActionId = u.EnforcementActionId
-                        and t.Type = 'CMF');
+                        and t.Type = 'CMF')
+      and exists (select 1
+                  from NETWORKNODEFLOW.dbo.EnforcementAction t
+                  where t.EnforcementActionId = u.EnforcementActionId);
 
     --============================================================================================
     -- Other Pathway Activities
@@ -464,7 +484,15 @@ BEGIN TRY
     where exists (select 1
                   from #AllEaUpdates t
                   where t.AirWebId = u.Id)
-       or exists (select 1
+      and exists (select 1
+                  from NETWORKNODEFLOW.dbo.EnforcementAction t
+                  where t.EnforcementActionId = etl.EpaActionId(u.FacilityId, u.ActionNumber));
+
+    update u
+    set DataExchangeStatus     = 'P',
+        DataExchangeStatusDate = sysdatetimeoffset()
+    from AirWeb.dbo.EnforcementActions u
+    where exists (select 1
                   from #NoFurtherAction t
                   where t.AirWebId = u.Id);
 
