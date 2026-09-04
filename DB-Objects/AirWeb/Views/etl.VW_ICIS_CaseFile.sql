@@ -19,51 +19,58 @@ When        Who                 What
 2026-03-16  DWaldron            Rename the Case Files table (epa-dx#95)
 2026-04-09  DWaldron            Renamed AirProgramCodes column (air-web#537, 1f183b3)
 2026-05-06  DWaldron            Update violation type columns (epa-dx#102)
+2026-09-04  DWaldron            Filter out Case Files derived from RMP Inspections (epa-dx#108)
 
 ***************************************************************************************************/
 
-select etl.EpaActionId(c.FacilityId, c.ActionNumber) as CaseFileId,
-       etl.EpaFacilityId(c.FacilityId)               as AirFacilityId,
-       concat('GA EPD Enforcement Case ID ', c.Id)   as CaseFileName,
-       iif(exists(select 1
-                  from AirWeb.dbo.EnforcementActions e
-                  where e.CaseFileId = c.Id
-                    and e.IsReportableAction = 1
-                    and e.IssueDate is not null
-                    and e.IsDeleted = 0), 'N', 'Y')  as SensitiveDataIndicator,
-       i.IssueDate                                   as AdvisementMethodDate,
-       iif(i.IssueDate is null, null, 'LTR')         as AdvisementMethodTypeCode,
-       c.ViolationTypeCode,
-       c.DayZero                                     as FrvDeterminationDate,
-       iif(v.Severity = 'HPV', c.DayZero, null)      as HpvDayZeroDate,
-       concat('Facility ID ', c.FacilityId)          as GaFacilityId,
-       c.AirProgramCodes                             as AirPrograms,
-       c.PollutantIds,
-       c.Id                                          as AirWebId,
-       c.DataExchangeStatus,
-       c.IsReportable
-from AirWeb.dbo.EnforcementCaseFiles c
+select distinct etl.EpaActionId(f.FacilityId, f.ActionNumber) as CaseFileId,
+                etl.EpaFacilityId(f.FacilityId)               as AirFacilityId,
+                concat('GA EPD Enforcement Case ID ', f.Id)   as CaseFileName,
+                iif(exists(select 1
+                           from AirWeb.dbo.EnforcementActions e
+                           where e.CaseFileId = f.Id
+                             and e.IsReportableAction = 1
+                             and e.IssueDate is not null
+                             and e.IsDeleted = 0), 'N', 'Y')  as SensitiveDataIndicator,
+                i.IssueDate                                   as AdvisementMethodDate,
+                iif(i.IssueDate is null, null, 'LTR')         as AdvisementMethodTypeCode,
+                f.ViolationTypeCode,
+                f.DayZero                                     as FrvDeterminationDate,
+                iif(v.Severity = 'HPV', f.DayZero, null)      as HpvDayZeroDate,
+                concat('Facility ID ', f.FacilityId)          as GaFacilityId,
+                f.AirProgramCodes                             as AirPrograms,
+                f.PollutantIds,
+                f.Id                                          as AirWebId,
+                f.DataExchangeStatus,
+                f.IsReportable
+from AirWeb.dbo.EnforcementCaseFiles f
     left join AirWeb.dbo.ViolationTypes v
-        on v.Code = c.ViolationTypeCode
+        on v.Code = f.ViolationTypeCode
     left join (select CaseFileId, min(IssueDate) as IssueDate
                from AirWeb.dbo.EnforcementActions
                where ActionType in
                      (N'NoticeOfViolation', N'ProposedConsentOrder', N'NovNfaLetter', N'ConsentOrder')
                  and IsDeleted = 0
                group by CaseFileId) i
-        on i.CaseFileId = c.Id
-where c.IsDeleted = 0
-  and c.ActionNumber is not null
+        on i.CaseFileId = f.Id
+    left join dbo.CaseFileComplianceEvents x
+        on x.CaseFileId = f.Id
+    left join dbo.ComplianceWork c
+        on c.Id = x.ComplianceEventId
+where f.IsDeleted = 0
+  and f.ActionNumber is not null
+  and (c.ComplianceWorkType is null or
+       c.ComplianceWorkType <> 'RmpInspection')
   and exists (select 1
               from NETWORKNODEFLOW.dbo.AirFacility
-              where AirFacilityID = etl.EpaFacilityId(c.FacilityId))
+              where AirFacilityID = etl.EpaFacilityId(f.FacilityId))
   and (exists (select 1
                from AirWeb.dbo.EnforcementActions e
-               where e.CaseFileId = c.Id
+               where e.CaseFileId = f.Id
                  and e.IsDeleted = 0
                  and e.IsReportableAction = 1)
     or exists (select 1
                from NETWORKNODEFLOW.dbo.CaseFile n
-               where n.CaseFileId = etl.EpaActionId(c.FacilityId, c.ActionNumber)));
+               where n.CaseFileId = etl.EpaActionId(f.FacilityId, f.ActionNumber)));
 
 GO

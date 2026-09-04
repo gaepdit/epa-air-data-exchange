@@ -71,8 +71,7 @@ BEGIN TRY
            AirWebId
     into #CaseFileUpdates
     from etl.VW_ICIS_CaseFile
-    where DataExchangeStatus = 'U'
-      and IsReportable = 1;
+    where DataExchangeStatus = 'U';
 
     -- Update existing Case Files
     update t
