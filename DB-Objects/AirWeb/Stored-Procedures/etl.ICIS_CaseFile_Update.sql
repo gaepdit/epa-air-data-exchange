@@ -46,6 +46,7 @@ Previously  DWaldron            Initially created in Oracle
 2026-03-16  DWaldron            Rename the Case Files table (epa-dx#95)
 2026-09-04  DWaldron            Prevent adding Enforcement Action data without a corresponding
                                 Case File (epa-dx#108)
+2026-09-10  DWaldron            Exclude Case Files with no Air Programs (epa#110)
 
 ***************************************************************************************************/
 
@@ -71,7 +72,8 @@ BEGIN TRY
            AirWebId
     into #CaseFileUpdates
     from etl.VW_ICIS_CaseFile
-    where DataExchangeStatus = 'U';
+    where DataExchangeStatus = 'U'
+      and AirPrograms <> '[]';
 
     -- Update existing Case Files
     update t
