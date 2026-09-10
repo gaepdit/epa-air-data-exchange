@@ -20,6 +20,7 @@ When        Who                 What
 2026-04-09  DWaldron            Renamed AirProgramCodes column (air-web#537, 1f183b3)
 2026-05-06  DWaldron            Update violation type columns (epa-dx#102)
 2026-09-04  DWaldron            Filter out Case Files derived from RMP Inspections (epa-dx#108)
+2026-09-10  DWaldron            Remove the obsolete `IsReportable` column (epa-dx#108)
 
 ***************************************************************************************************/
 
@@ -41,8 +42,7 @@ select distinct etl.EpaActionId(f.FacilityId, f.ActionNumber) as CaseFileId,
                 f.AirProgramCodes                             as AirPrograms,
                 f.PollutantIds,
                 f.Id                                          as AirWebId,
-                f.DataExchangeStatus,
-                f.IsReportable
+                f.DataExchangeStatus
 from AirWeb.dbo.EnforcementCaseFiles f
     left join AirWeb.dbo.ViolationTypes v
         on v.Code = f.ViolationTypeCode
